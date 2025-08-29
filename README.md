@@ -22,3 +22,5 @@ it took me a lot less time to make this than I would have spent without GPT.
 make
 ./bounce
 ```
+
+The resulting executable is less than 25kb on my machine and only 19k if you run 'strip bounce'

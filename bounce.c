@@ -11,8 +11,21 @@
 #include <time.h>
 #include <unistd.h>
 
+// height/width are updated when window is resized
 int win_width = 800;
 int win_height = 600;
+
+// circle props in some globals to keep it all simple
+float cx = 400;
+float cy = 300;
+float vx = 450.0f, vy = 420.0f;
+int radius = 40;
+
+
+int random_background = 0;
+int filled_circle = 1;
+
+
 
 // Direct pixel write into XImage->data (32-bit TrueColor)
 static inline void set_pixel(XImage *img, int x, int y, unsigned char r,
@@ -115,6 +128,44 @@ void draw_filled_circle(XImage *img, int cx, int cy, int radius,
   }
 }
 
+
+
+void draw(float dt, XImage* buffer){
+  // Update physics
+  cx += vx * dt;
+  cy += vy * dt;
+  if (cx - radius < 0) {
+    cx = radius;
+    vx = -vx;
+  }
+  if (cx + radius >= win_width) {
+    cx = win_width - radius - 1;
+    vx = -vx;
+  }
+  if (cy - radius < 0) {
+    cy = radius;
+    vy = -vy;
+  }
+  if (cy + radius >= win_height) {
+    cy = win_height - radius - 1;
+    vy = -vy;
+  }
+
+  // Draw frame
+  clear_image(buffer, 25, 25, 25);
+
+  if (random_background)
+    random_image(buffer);
+
+  if (filled_circle) {
+    draw_filled_circle(buffer, (int)cx, (int)cy, radius, 230, 230, 0);
+  } else {
+    draw_circle(buffer, (int)cx, (int)cy, radius, 230, 230, 0);
+  }
+}
+
+
+
 // time in ms
 long long now_ms() {
   struct timespec ts;
@@ -166,15 +217,10 @@ int main() {
       XCreateImage(dpy, DefaultVisual(dpy, screen), DefaultDepth(dpy, screen),
                    ZPixmap, 0, data, win_width, win_height, 32, 0);
 
-  float cx = win_width / 2.0f, cy = win_height / 2.0f;
-  float vx = 450.0f, vy = 420.0f;
-  int radius = 40;
 
   long long last = now_ms();
   int running = 1;
 
-  int random_background = 0;
-  int filled_circle = 1;
 
   while (running) {
     // Handle events
@@ -238,44 +284,13 @@ int main() {
     float dt = (t - last) / 1000.0f;
     last = t;
 
-    // Update physics
-    cx += vx * dt;
-    cy += vy * dt;
-    if (cx - radius < 0) {
-      cx = radius;
-      vx = -vx;
-    }
-    if (cx + radius >= win_width) {
-      cx = win_width - radius - 1;
-      vx = -vx;
-    }
-    if (cy - radius < 0) {
-      cy = radius;
-      vy = -vy;
-    }
-    if (cy + radius >= win_height) {
-      cy = win_height - radius - 1;
-      vy = -vy;
-    }
+    draw(dt, img);
 
-    // Draw frame
-    clear_image(img, 25, 25, 25);
-
-    if (random_background)
-      random_image(img);
-
-    if (filled_circle) {
-
-      draw_filled_circle(img, (int)cx, (int)cy, radius, 230, 230, 0);
-    } else {
-
-      draw_circle(img, (int)cx, (int)cy, radius, 230, 230, 0);
-    }
-
+    // copy buffered image to screen
     XPutImage(dpy, win, gc, img, 0, 0, 0, 0, win_width, win_height);
 
     // Small sleep to reduce CPU load
-    usleep(1000);
+    usleep(2000);
   }
 
   XDestroyImage(img); // frees "data" too
@@ -284,3 +299,4 @@ int main() {
   XCloseDisplay(dpy);
   return 0;
 }
+
