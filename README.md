@@ -3,15 +3,10 @@
 We only link with lX11. So no raylib or SDL used here. This also means it
 only works in linux. But its tiny and renders the bouncing pretty smoothly.
 
-There are some keyboard shortcuts to toggle features:
+Here is it in action:
 
-```
-f : full screeen toggle
-r : randomize background toggle
-c : filled circle toggle
-q : quit application
+<img width="1939" height="1167" alt="bounce_ball" src="https://github.com/user-attachments/assets/e8b7e374-780e-44bb-8b65-8a1a89f878e1" />
 
-```
 
 Also if you resize the application window it properly behaves and the ball stays in bounce and canvas
 is auto resized etc.
