@@ -129,7 +129,7 @@ int main() {
   printf("===============\n\n");
 
   printf("Keyboard shortcuts:\n\n");
-  printf("f : full screeen toggle \n");
+  printf("f : full screen toggle \n");
   printf("r : randomize background toggle \n");
   printf("c : filled circle toggle \n");
   printf("q : quit application \n\n");
