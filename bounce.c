@@ -262,6 +262,7 @@ int main() {
         // ignore event if size has not changed
         if (win_width == e.xconfigure.width && win_height == e.xconfigure.height) break;
 
+        printf("Window resized to width=%i height=%i\n", win_width, win_height);
         win_width = e.xconfigure.width;
         win_height = e.xconfigure.height;
 
