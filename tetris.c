@@ -1,6 +1,7 @@
 //
 // Author: Walter Schreppers
-//
+//  This is not completed nor clean at all yet. but just wanted to see adding things like draw_block
+//  would be easy... if I feel a little bored I might make it into an actual tetris some day :D
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
