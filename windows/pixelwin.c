@@ -3,6 +3,8 @@
 //
 // this is just some gpt generated code using the linux example. not tested yet...
 //
+// for smaller binary:
+//  x86_64-w64-mingw32-gcc -mwindows -s -o pixelwin.exe pixelwin.c -lgdi32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <stdint.h>
