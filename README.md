@@ -24,3 +24,11 @@ make
 ```
 
 The resulting executable is less than 25kb on my machine and only 19k if you run 'strip bounce'
+
+## Other versions
+
+UPDATE: played around and added a opengl accelerated linux version called pixelgl_linux.c which seems
+to animated just as smooth as the simple example but might come in handy later...
+
+Also added some windows and mac code that would do the same. Idea being to make a small library that is cross platform.
+The windows and mac versions havent been tested at all and we're also just generated with gpt5 so they might not even compile...
