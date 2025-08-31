@@ -197,7 +197,7 @@ int main() {
 
   Window win = XCreateSimpleWindow(
       dpy, RootWindow(dpy, screen), 10, 10, win_width, win_height, 1,
-      BlackPixel(dpy, screen), WhitePixel(dpy, screen));
+      BlackPixel(dpy, screen), BlackPixel(dpy, screen));
   XSelectInput(dpy, win, ExposureMask | KeyPressMask | StructureNotifyMask);
   XMapWindow(dpy, win);
 
@@ -259,6 +259,9 @@ int main() {
 
       // detect resize+fullscreen
       if (e.type == ConfigureNotify) {
+        // ignore event if size has not changed
+        if (win_width == e.xconfigure.width && win_height == e.xconfigure.height) break;
+
         win_width = e.xconfigure.width;
         win_height = e.xconfigure.height;
 
