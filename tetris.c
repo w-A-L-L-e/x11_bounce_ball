@@ -27,6 +27,7 @@ int random_background = 0;
 int filled_circle = 1;
 
 
+XImage *screen_buffer;
 
 // Direct pixel write into XImage->data (32-bit TrueColor)
 static inline void set_pixel(XImage *img, int x, int y, unsigned char r,
@@ -37,6 +38,10 @@ static inline void set_pixel(XImage *img, int x, int y, unsigned char r,
   unsigned int *dst =
       (unsigned int *)(img->data + y * img->bytes_per_line + x * 4);
   *dst = pixel;
+}
+
+static inline unsigned long get_color(unsigned char r, unsigned char g, unsigned char b) {
+  return (r << 16) | (g << 8) | b; // RGB24
 }
 
 void clear_image(XImage *img, unsigned char r, unsigned char g, unsigned char b) {
@@ -142,6 +147,206 @@ void draw_block(
   }
 }
 
+/* ============================ TETRIS =======================================
+* written in under 1 hour so don't mind the spaghetti
+*/
+
+unsigned long field[50][10]; // last 20 rows are visible
+int preview_next[6][6]; // preview next block
+unsigned long block_colors[7];
+
+void init_colors(){
+  block_colors[0] = get_color(20,230,20); // bar
+  block_colors[1] = get_color(220,30,20); // left l
+  block_colors[2] = get_color(20,30,220); // right l
+  block_colors[3] = get_color(220,230,20); // left z
+  block_colors[4] = get_color(20,230,220); // right_z
+  block_colors[5] = get_color(120,70,90); // cube
+  block_colors[6] = get_color(230,230,20); // t
+}
+
+
+
+// ultra simple tetris implementation
+// 
+// Down - Drop stone faster
+// Left/Right - Move stone
+// Up - Rotate Stone clockwise
+// q - Quit game
+
+// game configuration
+int cell_size=	20;
+int cols=		10;
+int rows=		20;
+int delay=	750;
+int maxfps=	30;
+
+// ---- CONFIG ----
+#define ROWS 20
+#define COLS 10
+#define CELL_SIZE 20
+#define DELAY 500  // ms tick
+#define MAXFPS 30
+
+
+
+int colors[8][3] = {
+  {0,   0,   0  },
+  {255, 0,   0  },
+  {0,   150, 0  },
+  {0,   0,   255},
+  {255, 120, 0  },
+  {255, 255, 0  },
+  {180, 0,   255},
+  {0,   220, 220}
+};
+
+
+// struct to store tetris shapes
+typedef struct {
+    int width;
+    int height;
+    const int *data;  // pointer to a flat array (row-major order)
+} Shape;
+
+// ---- GAME STATE ----
+typedef struct {
+    int board[ROWS+1][COLS]; // extra bottom row
+    Shape *stone;
+    int stone_x, stone_y;
+    int gameover;
+    int paused;
+} TetrisApp;
+
+
+const int shape1[] = {
+    1, 1, 1,
+    0, 1, 0
+};
+
+const int shape2[] = {
+    0, 2, 2,
+    2, 2, 0
+};
+
+const int shape3[] = {
+    3, 3, 0,
+    0, 3, 3
+};
+
+const int shape4[] = {
+    4, 0, 0,
+    4, 4, 4
+};
+
+const int shape5[] = {
+    0, 0, 5,
+    5, 5, 5
+};
+
+const int shape6[] = {
+    6, 6, 6, 6
+};
+
+const int shape7[] = {
+    7, 7,
+    7, 7
+};
+
+// Array of tetris shape structs
+Shape tetris_shapes[] = {
+    {3, 2, shape1},
+    {3, 2, shape2},
+    {3, 2, shape3},
+    {3, 2, shape4},
+    {3, 2, shape5},
+    {4, 1, shape6},
+    {2, 2, shape7}
+};
+
+// #define NUM_SHAPES (sizeof(tetris_shapes)/sizeof(tetris_shapes[0]))
+#define NUM_SHAPES 7
+
+
+
+
+void draw_rect(int x, int y, int width, int height, int color) {
+  unsigned char r = colors[color][0];
+  unsigned char g = colors[color][1];
+  unsigned char b = colors[color][2];
+
+  // pass buffer   XImage* img, 
+  draw_block(screen_buffer, x,y,width, height, r,g,b);
+  // printf("rect x=%i y=%i w=%i h=%i     r=%i g=%i b=%i\n", x,y,width,height,r,g,b);
+}
+
+
+void draw_matrix(int matrix[ROWS+1][COLS], int off_x, int off_y) {
+    for (int y = 0; y < ROWS+1; y++) {
+        for (int x = 0; x < COLS; x++) {
+            if (matrix[y][x]) {
+                draw_rect((off_x + x) * CELL_SIZE,
+                          (off_y + y) * CELL_SIZE,
+                          CELL_SIZE, CELL_SIZE, matrix[y][x]);
+            }
+        }
+    }
+}
+
+
+void draw_shape(const Shape *s, int off_x, int off_y) {
+    for (int y = 0; y < s->height; y++) {
+        for (int x = 0; x < s->width; x++) {
+            int val = s->data[y * s->width + x];
+            if (val) {
+                draw_rect((off_x + x) * CELL_SIZE,
+                          (off_y + y) * CELL_SIZE,
+                          CELL_SIZE, CELL_SIZE, val);
+            }
+        }
+    }
+}
+
+
+
+// type 0-6, rotation 0-3 (90 degrees)
+void draw_tetrimon(int x_matrix_pos, int y_matrix_pos, int type, int rotation){
+
+  if (type>=0 && type < NUM_SHAPES){
+    draw_shape( &tetris_shapes[type], x_matrix_pos, y_matrix_pos);
+  }
+  else{
+      printf("wrong block type %i", type);
+  }
+  
+}
+
+
+
+Shape rotate_clockwise(const Shape *s) {
+    int new_width = s->height;
+    int new_height = s->width;
+
+    // Allocate new flat array
+    int *rotated_data = malloc(new_width * new_height * sizeof(int));
+    if (!rotated_data) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(1);
+    }
+
+    for (int y = 0; y < s->height; y++) {
+        for (int x = 0; x < s->width; x++) {
+            int value = s->data[y * s->width + x];
+            // Place it in rotated position
+            int new_x = y;
+            int new_y = s->width - 1 - x;
+            rotated_data[new_y * new_width + new_x] = value;
+        }
+    }
+
+    Shape rotated = { new_width, new_height, rotated_data };
+    return rotated;
+}
 
 
 
@@ -172,7 +377,17 @@ void draw(float dt, XImage* buffer){
   if (random_background)
     random_image(buffer);
 
-  draw_block(buffer, 20, 20, 100,100, 200, 10,10);
+
+  // left wall
+  draw_block(buffer, 0, 0, 10, 500,     20, 20, 80);
+
+  //right
+  draw_block(buffer, 400, 0, 10, 500,   20, 20, 80);
+
+
+  //bottom
+  draw_block(buffer, 0, 500, 410, 10,   20, 20, 80);
+
 
 
   if (filled_circle) {
@@ -180,6 +395,15 @@ void draw(float dt, XImage* buffer){
   } else {
     draw_circle(buffer, (int)cx, (int)cy, radius, 230, 230, 0);
   }
+
+
+  draw_tetrimon(3, 5, 0, 0); // last param is rotation
+  draw_tetrimon(5, 7, 1, 0); // last param is rotation
+  draw_tetrimon(8, 9, 2, 0); // last param is rotation
+  draw_tetrimon(4, 11, 3, 0); // last param is rotation
+  draw_tetrimon(5, 14, 4, 0); // last param is rotation
+  draw_tetrimon(6, 17, 5, 0); // last param is rotation
+  draw_tetrimon(2, 18, 6, 0); // last param is rotation
 
 
 }
@@ -192,6 +416,7 @@ long long now_ms() {
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (long long)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
+
 
 int main() {
   srand(time(NULL)); // seed for random numbers
@@ -233,7 +458,7 @@ int main() {
 
   // Create XImage with raw buffer
   char *data = malloc(win_width * win_height * 4);
-  XImage *img =
+  screen_buffer =
       XCreateImage(dpy, DefaultVisual(dpy, screen), DefaultDepth(dpy, screen),
                    ZPixmap, 0, data, win_width, win_height, 32, 0);
 
@@ -287,10 +512,10 @@ int main() {
         // printf("Window resized to width=%i height=%i\n", win_width, win_height);
 
         // Recreate XImage with new size
-        if (img) {
-          XDestroyImage(img);
+        if (screen_buffer) {
+          XDestroyImage(screen_buffer);
         }
-        img = XCreateImage(dpy, DefaultVisual(dpy, screen),
+        screen_buffer = XCreateImage(dpy, DefaultVisual(dpy, screen),
                            DefaultDepth(dpy, screen), ZPixmap, 0,
                            malloc(win_width * win_height * 4), win_width,
                            win_height, 32, 0);
@@ -309,16 +534,16 @@ int main() {
     last = t;
 
     // draw to image buffer using deltatime for physics
-    draw(dt, img);
+    draw(dt, screen_buffer);
 
     // copy buffered image to screen
-    XPutImage(dpy, win, gc, img, 0, 0, 0, 0, win_width, win_height);
+    XPutImage(dpy, win, gc, screen_buffer, 0, 0, 0, 0, win_width, win_height);
 
     // reduce CPU load with some sleep
     usleep(2000);
   }
 
-  XDestroyImage(img); // free double buffer img
+  XDestroyImage(screen_buffer); // free double buffer img
   XFreeGC(dpy, gc);   // free display and graphics context
   XDestroyWindow(dpy, win);
   XCloseDisplay(dpy);
