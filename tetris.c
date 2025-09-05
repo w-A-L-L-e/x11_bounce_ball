@@ -263,6 +263,27 @@ Shape rotate_counter_clockwise(const Shape *s) {
     return rotated;
 }
 
+Shape rotate_clockwise(const Shape *s) {
+    int new_width = s->height;
+    int new_height = s->width;
+    // Allocate new flat array
+    int *rotated_data = malloc(new_width * new_height * sizeof(int));
+    if (!rotated_data) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(1);
+    }
+    for (int y = 0; y < s->height; y++) {
+        for (int x = 0; x < s->width; x++) {
+            int value = s->data[y * s->width + x];
+            // Place it in rotated position
+            int new_x = s->height - 1 - y;
+            int new_y = x;
+            rotated_data[new_y * new_width + new_x] = value;
+        }
+    }
+    Shape rotated = { new_width, new_height, rotated_data };
+    return rotated;
+}
 
 // type 0-6, rotation 0-3 (90 degrees)
 void draw_tetrimon(int x_matrix_pos, int y_matrix_pos, int type, int rotation){
@@ -275,7 +296,8 @@ void draw_tetrimon(int x_matrix_pos, int y_matrix_pos, int type, int rotation){
 
   printf("rotation = %i\n", rotation);
   for(int c=0; c<rotation; c++) {
-    block = rotate_counter_clockwise( &block );
+    // block = rotate_counter_clockwise( &block );
+    block = rotate_clockwise( &block );
   }
 
   draw_shape( &block, x_matrix_pos, y_matrix_pos);
