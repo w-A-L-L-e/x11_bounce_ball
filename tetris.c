@@ -238,20 +238,6 @@ void draw_shape(const Shape *s, int off_x, int off_y) {
 
 
 
-// type 0-6, rotation 0-3 (90 degrees)
-void draw_tetrimon(int x_matrix_pos, int y_matrix_pos, int type, int rotation){
-
-  if (type>=0 && type < NUM_SHAPES){
-    draw_shape( &tetris_shapes[type], x_matrix_pos, y_matrix_pos);
-  }
-  else{
-      printf("wrong block type %i", type);
-  }
-  
-}
-
-
-
 Shape rotate_clockwise(const Shape *s) {
     int new_width = s->height;
     int new_height = s->width;
@@ -277,6 +263,26 @@ Shape rotate_clockwise(const Shape *s) {
     return rotated;
 }
 
+
+// type 0-6, rotation 0-3 (90 degrees)
+void draw_tetrimon(int x_matrix_pos, int y_matrix_pos, int type, int rotation){
+  if (type < 0 && type >= NUM_SHAPES){
+    printf("wrong block type %i", type);
+    return;
+  }
+
+  Shape block = tetris_shapes[type];
+
+  printf("rotation = %i\n", rotation);
+  for(int c=0; c<rotation; c++) {
+    block = rotate_clockwise( &block );
+  }
+
+  draw_shape( &block, x_matrix_pos, y_matrix_pos);
+}
+
+
+
 void draw_bouncy_ball(float dt, XImage* buffer){
   cx += vx * dt;
   cy += vy * dt;
@@ -300,7 +306,7 @@ void draw_bouncy_ball(float dt, XImage* buffer){
   draw_filled_circle(buffer, (int)cx, (int)cy, radius, 230, 230, 0);
 }
 
-
+int counter = 0;
 void draw(float dt, XImage* buffer){
   // Draw frame
   clear_image(buffer, 25, 25, 25);
@@ -313,13 +319,18 @@ void draw(float dt, XImage* buffer){
   draw_block(buffer, 0, 500, 410, 10,   20, 20, 80);
 
   // draw all 7 tetrimons
-  draw_tetrimon(3, 5, 0, 0); // last param is rotation
-  draw_tetrimon(5, 7, 1, 0); // last param is rotation
-  draw_tetrimon(8, 9, 2, 0); // last param is rotation
-  draw_tetrimon(4, 11, 3, 0); // last param is rotation
-  draw_tetrimon(5, 14, 4, 0); // last param is rotation
-  draw_tetrimon(6, 17, 5, 0); // last param is rotation
-  draw_tetrimon(2, 18, 6, 0); // last param is rotation
+  
+  counter++;
+  counter = counter % 2000;
+  int rotation = counter/100;
+
+  draw_tetrimon(1, 5, 0, rotation);
+  draw_tetrimon(5, 7, 1, rotation);
+  draw_tetrimon(9, 9, 2, rotation); 
+  draw_tetrimon(4, 11, 3, rotation); 
+  draw_tetrimon(8, 14, 4, rotation); 
+  draw_tetrimon(9, 19, 5, rotation); 
+  draw_tetrimon(2, 19, 6, rotation); 
 }
 
 
