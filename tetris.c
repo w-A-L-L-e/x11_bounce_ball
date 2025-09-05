@@ -238,7 +238,7 @@ void draw_shape(const Shape *s, int off_x, int off_y) {
 
 
 
-Shape rotate_clockwise(const Shape *s) {
+Shape rotate_counter_clockwise(const Shape *s) {
     int new_width = s->height;
     int new_height = s->width;
 
@@ -275,7 +275,7 @@ void draw_tetrimon(int x_matrix_pos, int y_matrix_pos, int type, int rotation){
 
   printf("rotation = %i\n", rotation);
   for(int c=0; c<rotation; c++) {
-    block = rotate_clockwise( &block );
+    block = rotate_counter_clockwise( &block );
   }
 
   draw_shape( &block, x_matrix_pos, y_matrix_pos);
@@ -322,7 +322,7 @@ void draw(float dt, XImage* buffer){
   
   counter++;
   counter = counter % 2000;
-  int rotation = counter/100;
+  int rotation = counter/200;
 
   draw_tetrimon(1, 5, 0, rotation);
   draw_tetrimon(5, 7, 1, rotation);
