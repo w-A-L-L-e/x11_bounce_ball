@@ -23,9 +23,6 @@ float vx = 450.0f, vy = 420.0f;
 int radius = 40;
 
 
-int random_background = 0;
-int filled_circle = 1;
-
 
 XImage *screen_buffer;
 
@@ -53,58 +50,6 @@ void clear_image(XImage *img, unsigned char r, unsigned char g, unsigned char b)
   }
 }
 
-#define RSIZE 2500
-void random_image(XImage *img) {
-  unsigned char r;
-  unsigned char g;
-  unsigned char b;
-  unsigned long pixel = 0;
-
-// make lookup table for fast random colors
-  unsigned long random_colors[RSIZE];
-  for (int i = 0; i < RSIZE; i++) {
-    r = rand() % 251;
-    g = rand() % 251;
-    b = rand() % 251;
-    random_colors[i] = (r << 16) | (g << 8) | b;
-  }
-
-  int pos = 0;
-  for (int y = 0; y < win_height; y++) {
-    unsigned int *row = (unsigned int *)(img->data + y * img->bytes_per_line);
-    for (int x = 0; x < win_width; x++) {
-      // pixel = random_colors[(x+y) % 1024]; //diagonal bands also nice effect
-      pos = (pos + 13) % RSIZE;
-      pixel = random_colors[pos];
-      row[x] = pixel;
-    }
-  }
-}
-
-// Bresenham circle
-void draw_circle(XImage *img, int cx, int cy, int radius, unsigned char r,
-                 unsigned char g, unsigned char b) {
-  int x = 0;
-  int y = radius;
-  int d = 3 - 2 * radius;
-  while (y >= x) {
-    set_pixel(img, cx + x, cy + y, r, g, b);
-    set_pixel(img, cx - x, cy + y, r, g, b);
-    set_pixel(img, cx + x, cy - y, r, g, b);
-    set_pixel(img, cx - x, cy - y, r, g, b);
-    set_pixel(img, cx + y, cy + x, r, g, b);
-    set_pixel(img, cx - y, cy + x, r, g, b);
-    set_pixel(img, cx + y, cy - x, r, g, b);
-    set_pixel(img, cx - y, cy - x, r, g, b);
-    x++;
-    if (d > 0) {
-      y--;
-      d += 4 * (x - y) + 10;
-    } else {
-      d += 4 * x + 6;
-    }
-  }
-}
 
 // Filled Bresenham circle: draws a solid disk
 void draw_filled_circle(XImage *img, int cx, int cy, int radius,
@@ -147,9 +92,12 @@ void draw_block(
   }
 }
 
-/* ============================ TETRIS =======================================
-* written in under 1 hour so don't mind the spaghetti
-*/
+/*=============================== TETRIS =====================================
+  Down - Drop stone faster
+  Left/Right - Move stone
+  Up - Rotate Stone clockwise
+  q - Quit game
+=============================================================================*/
 
 unsigned long field[50][10]; // last 20 rows are visible
 int preview_next[6][6]; // preview next block
@@ -166,21 +114,6 @@ void init_colors(){
 }
 
 
-
-// ultra simple tetris implementation
-// 
-// Down - Drop stone faster
-// Left/Right - Move stone
-// Up - Rotate Stone clockwise
-// q - Quit game
-
-// game configuration
-int cell_size=	20;
-int cols=		10;
-int rows=		20;
-int delay=	750;
-int maxfps=	30;
-
 // ---- CONFIG ----
 #define ROWS 20
 #define COLS 10
@@ -189,7 +122,7 @@ int maxfps=	30;
 #define MAXFPS 30
 
 
-
+// block colors
 int colors[8][3] = {
   {0,   0,   0  },
   {255, 0,   0  },
@@ -200,6 +133,14 @@ int colors[8][3] = {
   {180, 0,   255},
   {0,   220, 220}
 };
+
+
+void draw_rect(int x, int y, int width, int height, int color_index) {
+  unsigned char r = colors[color_index][0];
+  unsigned char g = colors[color_index][1];
+  unsigned char b = colors[color_index][2];
+  draw_block(screen_buffer, x,y,width, height, r,g,b);
+}
 
 
 // struct to store tetris shapes
@@ -269,18 +210,6 @@ Shape tetris_shapes[] = {
 
 
 
-
-void draw_rect(int x, int y, int width, int height, int color) {
-  unsigned char r = colors[color][0];
-  unsigned char g = colors[color][1];
-  unsigned char b = colors[color][2];
-
-  // pass buffer   XImage* img, 
-  draw_block(screen_buffer, x,y,width, height, r,g,b);
-  // printf("rect x=%i y=%i w=%i h=%i     r=%i g=%i b=%i\n", x,y,width,height,r,g,b);
-}
-
-
 void draw_matrix(int matrix[ROWS+1][COLS], int off_x, int off_y) {
     for (int y = 0; y < ROWS+1; y++) {
         for (int x = 0; x < COLS; x++) {
@@ -348,10 +277,7 @@ Shape rotate_clockwise(const Shape *s) {
     return rotated;
 }
 
-
-
-void draw(float dt, XImage* buffer){
-  // Update physics
+void draw_bouncy_ball(float dt, XImage* buffer){
   cx += vx * dt;
   cy += vy * dt;
   if (cx - radius < 0) {
@@ -371,32 +297,22 @@ void draw(float dt, XImage* buffer){
     vy = -vy;
   }
 
+  draw_filled_circle(buffer, (int)cx, (int)cy, radius, 230, 230, 0);
+}
+
+
+void draw(float dt, XImage* buffer){
   // Draw frame
   clear_image(buffer, 25, 25, 25);
 
-  if (random_background)
-    random_image(buffer);
+  draw_bouncy_ball(dt, buffer);
 
-
-  // left wall
+  // walls
   draw_block(buffer, 0, 0, 10, 500,     20, 20, 80);
-
-  //right
   draw_block(buffer, 400, 0, 10, 500,   20, 20, 80);
-
-
-  //bottom
   draw_block(buffer, 0, 500, 410, 10,   20, 20, 80);
 
-
-
-  if (filled_circle) {
-    draw_filled_circle(buffer, (int)cx, (int)cy, radius, 230, 230, 0);
-  } else {
-    draw_circle(buffer, (int)cx, (int)cy, radius, 230, 230, 0);
-  }
-
-
+  // draw all 7 tetrimons
   draw_tetrimon(3, 5, 0, 0); // last param is rotation
   draw_tetrimon(5, 7, 1, 0); // last param is rotation
   draw_tetrimon(8, 9, 2, 0); // last param is rotation
@@ -404,8 +320,6 @@ void draw(float dt, XImage* buffer){
   draw_tetrimon(5, 14, 4, 0); // last param is rotation
   draw_tetrimon(6, 17, 5, 0); // last param is rotation
   draw_tetrimon(2, 18, 6, 0); // last param is rotation
-
-
 }
 
 
@@ -426,8 +340,6 @@ int main() {
 
   printf("Keyboard shortcuts:\n\n");
   printf("f : full screen toggle \n");
-  printf("r : randomize background toggle \n");
-  printf("c : filled circle toggle \n");
   printf("q : quit application \n\n");
 
   printf(
@@ -479,13 +391,7 @@ int main() {
           running = 0;
         }
 
-        if (key == XK_c || key == XK_C) {
-          filled_circle = !filled_circle;
-        }
-
-        if (key == XK_r || key == XK_R) {
-          random_background = !random_background;
-        }
+        // if (key == XK_c || key == XK_C) {
 
         if (key == XK_f || key == XK_F) { // toggle fullscreen
           XEvent xev = {0};
